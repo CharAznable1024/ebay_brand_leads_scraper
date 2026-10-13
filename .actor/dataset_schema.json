@@ -1,0 +1,1 @@
+{ "actorSpecification": 1, "fields": {}, "views": { "overview": { "title": "eBay brand seller leads", "transformation": { "fields": ["seller_name", "profile_url", "seller_country", "feedback_score", "items_listed", "brands", "categories", "lead_score", "sample_listing_urls"] }, "display": { "component": "table", "properties": {} } } } }

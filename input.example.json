@@ -1,0 +1,17 @@
+{
+  "searchQueries": ["Gucci"],
+  "startUrls": [],
+  "country": "US",
+  "sellerCountries": [],
+  "maxListingsPerQuery": 60,
+  "maxSellers": 25,
+  "minFeedbackScore": 0,
+  "minItemsListed": 1,
+  "maxConcurrency": 1,
+  "maxSellerDetailConcurrency": 2,
+  "maxRequestRetries": 2,
+  "navigationTimeoutSecs": 60,
+  "dedupeMode": "new_and_updated",
+  "dedupeStoreName": "ebay-brand-seller-lead-state-v1",
+  "proxyConfiguration": { "useApifyProxy": false }
+}
