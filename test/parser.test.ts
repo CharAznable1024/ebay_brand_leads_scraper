@@ -16,6 +16,10 @@ describe('eBay brand discovery parser', () => {
         expect(parseBrandItems(page, 'https://www.ebay.com/b/Gucci/bn_21826083', 'Gucci', 10)[0]).toMatchObject({ item_url: 'https://www.ebay.com/itm/123456789012', brand: 'Gucci' });
     });
 
+    it('uses the real eBay Europe filter URL when the accordion options are lazy-loaded', () => {
+        expect(findEuropeFilterUrl('<h3 aria-label="Item location">Item location</h3><div class="accordion-placeholder"></div>', 'https://www.ebay.com/b/Gucci/bn_21826083')).toBe('https://www.ebay.com/b/Gucci/bn_21826083?LH_PrefLoc=5&mag=1');
+    });
+
     it('extracts and merges sellers from item pages', () => {
         const item = { item_url: 'https://www.ebay.com/itm/123456789012', brand: 'Gucci', category: null };
         const first = parseSellerFromItem('<a href="https://www.ebay.com/usr/vintage-shop">Seller</a><script>{"category":"Handbags"}</script>', item)!;

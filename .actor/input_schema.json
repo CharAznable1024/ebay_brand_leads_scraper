@@ -15,6 +15,7 @@
     "minFeedbackScore": { "title": "Minimum feedback score", "description": "Exclude sellers below this public feedback score.", "type": "integer", "default": 0, "minimum": 0, "maximum": 1000000000 },
     "minMatchedListings": { "title": "Minimum matching listings", "description": "Minimum sampled brand listings tied to one seller.", "type": "integer", "default": 1, "minimum": 1, "maximum": 1000000 },
     "maxConcurrency": { "title": "Concurrency", "description": "Maximum concurrent Bright Data public-page requests.", "type": "integer", "default": 5, "minimum": 1, "maximum": 10 },
+    "maxProfileConcurrency": { "title": "Profile concurrency", "description": "Seller Profile/About/Feedback concurrency. Keep at 1 to avoid eBay/Bright Data rate limiting.", "type": "integer", "default": 1, "minimum": 1, "maximum": 3 },
     "maxRequestRetries": { "title": "Retries", "description": "Maximum retries for one failed Web Unlocker request.", "type": "integer", "default": 1, "minimum": 0, "maximum": 5 },
     "navigationTimeoutSecs": { "title": "Page timeout", "description": "Seconds allowed for one public-page request.", "type": "integer", "default": 120, "minimum": 15, "maximum": 180 },
     "dedupeMode": { "title": "Deduplication", "description": "Control whether all, only new, or new and updated seller leads are emitted.", "type": "string", "editor": "select", "default": "new_and_updated", "enum": ["all", "new_only", "new_and_updated"] },

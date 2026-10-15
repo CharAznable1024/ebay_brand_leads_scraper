@@ -14,7 +14,7 @@ const zone = process.env.BRIGHT_DATA_ZONE?.trim() || 'ebay_live_unlocker';
 if (!apiKey) throw new Error('BRIGHT_DATA_API_KEY is required because eBay brand, item, and profile pages block data-center browsers.');
 if (!input.brands.length && !input.startUrls.length) throw new Error('Provide at least one brand name or public eBay brand page URL.');
 
-const fetchPage = (url: string) => fetchWithWebUnlocker(url, { apiKey, zone, country: 'US', timeoutMillis: input.navigationTimeoutSecs * 1_000, maxAttempts: input.maxRequestRetries + 1 });
+const fetchPage = (url: string, render = true) => fetchWithWebUnlocker(url, { apiKey, zone, country: 'US', timeoutMillis: input.navigationTimeoutSecs * 1_000, maxAttempts: input.maxRequestRetries + 1, render });
 async function mapConcurrent<T, R>(items: T[], concurrency: number, worker: (item: T, index: number) => Promise<R>): Promise<R[]> {
     const results = new Array<R>(items.length); let cursor = 0;
     await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => {
@@ -25,7 +25,7 @@ async function mapConcurrent<T, R>(items: T[], concurrency: number, worker: (ite
 
 let sources: BrandSource[] = input.startUrls.map((brandUrl) => ({ brand: brandNameFromUrl(brandUrl), brand_url: brandUrl }));
 if (input.brands.length) {
-    const directory = await fetchPage('https://www.ebay.com/n/all-brands');
+    const directory = await fetchPage('https://www.ebay.com/n/all-brands', false);
     const discovered = parseBrandDirectory(directory.html, input.brands, 'https://www.ebay.com/n/all-brands');
     sources = [...sources, ...discovered];
     const missing = input.brands.filter((brand) => !discovered.some((source) => source.brand.toLowerCase() === brand.toLowerCase()));
@@ -36,15 +36,10 @@ sources = [...new Map(sources.map((source) => [source.brand_url, source])).value
 const discoveryDebug: Array<Record<string, unknown>> = [];
 const perBrandItems = await mapConcurrent(sources, input.maxConcurrency, async (source) => {
     try {
-        const brandPage = await fetchPage(source.brand_url);
-        const europeUrl = findEuropeFilterUrl(brandPage.html, source.brand_url);
-        if (!europeUrl) {
-            discoveryDebug.push({ brand: source.brand, brand_url: source.brand_url, europe_filter_url: null, page: inspectUnlockedPage(brandPage.html, brandPage) });
-            log.warning('Europe item-location filter was not found; brand skipped to avoid non-EU items', { brand: source.brand });
-            return [];
-        }
-        const filteredPage = europeUrl === source.brand_url ? brandPage : await fetchPage(europeUrl);
-        const items = parseBrandItems(filteredPage.html, europeUrl, source.brand, input.maxListingsPerBrand);
+        const europeUrl = findEuropeFilterUrl('', source.brand_url) as string;
+        let filteredPage = await fetchPage(europeUrl, false);
+        let items = parseBrandItems(filteredPage.html, europeUrl, source.brand, input.maxListingsPerBrand);
+        if (!items.length) { filteredPage = await fetchPage(europeUrl, true); items = parseBrandItems(filteredPage.html, europeUrl, source.brand, input.maxListingsPerBrand); }
         discoveryDebug.push({ brand: source.brand, brand_url: source.brand_url, europe_filter_url: europeUrl, item_count: items.length, page: inspectUnlockedPage(filteredPage.html, filteredPage) });
         return items;
     } catch (error) {
@@ -57,7 +52,7 @@ await Actor.setValue('BRAND_DISCOVERY_DEBUG', discoveryDebug);
 const itemEvidence = [...new Map(perBrandItems.flat().map((item) => [item.item_url, item])).values()].slice(0, input.maxItemDetails);
 
 const sellerParts = await mapConcurrent(itemEvidence, input.maxConcurrency, async (item) => {
-    try { const page = await fetchPage(item.item_url); return parseSellerFromItem(page.html, item); }
+    try { let page = await fetchPage(item.item_url, false); let seller = parseSellerFromItem(page.html, item); if (!seller) { page = await fetchPage(item.item_url, true); seller = parseSellerFromItem(page.html, item); } return seller; }
     catch (error) { log.warning('Item seller extraction failed', { itemUrl: item.item_url, error: String(error) }); return null; }
 });
 const candidates = new Map<string, SellerCandidate>();
@@ -67,20 +62,27 @@ for (const part of sellerParts) {
 }
 const selectedCandidates = [...candidates.values()].sort((a, b) => b.item_urls.length - a.item_urls.length).slice(0, input.maxSellerProfiles);
 
-const enriched = await mapConcurrent(selectedCandidates, input.maxConcurrency, async (candidate) => {
+const enrichmentDebug: Array<Record<string, unknown>> = [];
+const enriched = await mapConcurrent(selectedCandidates, input.maxProfileConcurrency, async (candidate) => {
     try {
         const profile = await fetchPage(candidate.profile_url); let stats = parsePublicProfileText(htmlToVisibleText(profile.html));
         if (!stats.seller_country_code) {
             const about = await fetchPage(findAboutUrl(profile.html, candidate.profile_url, candidate.seller_name));
             stats = mergeStats(stats, parsePublicProfileText(htmlToVisibleText(about.html)));
         }
+        if (!stats.seller_country_code || !input.sellerCountries.includes(stats.seller_country_code)) {
+            enrichmentDebug.push({ seller: candidate.seller_id, country: stats.seller_country_code, feedback_score: stats.feedback_score, items_sold: stats.items_sold, skipped_feedback: true });
+            return { candidate, stats };
+        }
         if ([stats.feedback_score, stats.feedback_positive_12m, stats.rating_accurate_description].some((value) => value === null)) {
             const feedback = await fetchPage(findFeedbackUrl(profile.html, candidate.profile_url, candidate.seller_name));
             stats = mergeStats(stats, parsePublicProfileText(htmlToVisibleText(feedback.html)));
         }
+        enrichmentDebug.push({ seller: candidate.seller_id, country: stats.seller_country_code, feedback_score: stats.feedback_score, items_sold: stats.items_sold });
         return { candidate, stats };
-    } catch (error) { log.warning('Seller profile enrichment failed', { seller: candidate.seller_id, error: String(error) }); return { candidate, stats: null as PublicProfileStats | null }; }
+    } catch (error) { enrichmentDebug.push({ seller: candidate.seller_id, error: String(error) }); log.warning('Seller profile enrichment failed', { seller: candidate.seller_id, error: String(error) }); return { candidate, stats: null as PublicProfileStats | null }; }
 });
+await Actor.setValue('SELLER_ENRICHMENT_DEBUG', enrichmentDebug);
 
 const scrapedAt = new Date().toISOString();
 let leads = enriched.map(({ candidate, stats }) => {

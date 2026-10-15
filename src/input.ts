@@ -33,6 +33,7 @@ export function normalizeInput(raw: ActorInput | null | undefined): Input {
         minFeedbackScore: integer(data.minFeedbackScore, 0, 0, 1_000_000_000, 'minFeedbackScore'),
         minMatchedListings: integer(data.minMatchedListings, 1, 1, 1_000_000, 'minMatchedListings'),
         maxConcurrency: integer(data.maxConcurrency, 5, 1, 10, 'maxConcurrency'),
+        maxProfileConcurrency: integer(data.maxProfileConcurrency, 1, 1, 3, 'maxProfileConcurrency'),
         maxRequestRetries: integer(data.maxRequestRetries, 1, 0, 5, 'maxRequestRetries'),
         navigationTimeoutSecs: integer(data.navigationTimeoutSecs, 120, 15, 180, 'navigationTimeoutSecs'),
         dedupeMode,

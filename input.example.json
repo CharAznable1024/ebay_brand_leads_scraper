@@ -9,6 +9,7 @@
   "minFeedbackScore": 0,
   "minMatchedListings": 1,
   "maxConcurrency": 5,
+  "maxProfileConcurrency": 1,
   "maxRequestRetries": 1,
   "navigationTimeoutSecs": 120,
   "dedupeMode": "new_and_updated",

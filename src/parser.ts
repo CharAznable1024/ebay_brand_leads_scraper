@@ -33,7 +33,7 @@ export function findEuropeFilterUrl(html: string, baseUrl: string): string | nul
         const closest = hrefs.at(-1)?.[1];
         if (closest) return ebayCom(closest, baseUrl);
     }
-    return null;
+    const fallback = new URL(baseUrl); fallback.searchParams.set('LH_PrefLoc', '5'); fallback.searchParams.set('mag', '1'); return ebayCom(fallback.toString(), baseUrl);
 }
 
 export function parseBrandItems(html: string, pageUrl: string, brand: string, maximum: number): ItemEvidence[] {

@@ -7,5 +7,6 @@ describe('input', () => {
         expect(input.startUrls).toEqual(['https://www.ebay.com/b/PRADA/bn_21833299']);
         expect(input.sellerCountries).toEqual(expect.arrayContaining(['DE', 'FR', 'IT', 'SE']));
         expect(input.sellerCountries).not.toContain('GB');
+        expect(input.maxProfileConcurrency).toBe(1);
     });
 });

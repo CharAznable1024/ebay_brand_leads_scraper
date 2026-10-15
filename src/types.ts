@@ -11,6 +11,7 @@ export interface ActorInput {
     minFeedbackScore?: unknown;
     minMatchedListings?: unknown;
     maxConcurrency?: unknown;
+    maxProfileConcurrency?: unknown;
     maxRequestRetries?: unknown;
     navigationTimeoutSecs?: unknown;
     dedupeMode?: unknown;
@@ -28,6 +29,7 @@ export interface Input {
     minFeedbackScore: number;
     minMatchedListings: number;
     maxConcurrency: number;
+    maxProfileConcurrency: number;
     maxRequestRetries: number;
     navigationTimeoutSecs: number;
     dedupeMode: DedupeMode;
