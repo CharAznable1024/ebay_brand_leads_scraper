@@ -1,3 +1,41 @@
-import type { ActorInput, DedupeMode, Input, Market } from './types.js';
-const markets=new Set<Market>(['US','GB','DE','AU','CA']); const list=(v:unknown,f:string[],n:string)=>{const x=v===undefined?f:v;if(!Array.isArray(x))throw new Error(`${n} must be an array`);return[...new Set(x.map(i=>typeof i==='string'?i.trim():'').filter(Boolean))]}; const num=(v:unknown,f:number,min:number,max:number,n:string)=>{const x=v===undefined?f:v;if(!Number.isInteger(x)||(x as number)<min||(x as number)>max)throw new Error(`${n} must be an integer between ${min} and ${max}`);return x as number};
-export function normalizeInput(raw:ActorInput|null|undefined):Input { const d=raw??{},country=(d.country??'US')as Market;if(!markets.has(country))throw new Error('Unsupported country');const sellerCountries=list(d.sellerCountries,[],'sellerCountries').map(x=>x.toUpperCase());if(sellerCountries.some(x=>!/^[A-Z]{2}$/.test(x)))throw new Error('sellerCountries must contain ISO alpha-2 codes');const startUrls=list(d.startUrls,[],'startUrls');for(const url of startUrls){const p=new URL(url);if(p.protocol!=='https:'||!p.hostname.endsWith('ebay.com'))throw new Error('startUrls must be public HTTPS ebay.com URLs')}const dedupeMode=(d.dedupeMode??'new_and_updated')as DedupeMode;if(!['all','new_only','new_and_updated'].includes(dedupeMode))throw new Error('Invalid dedupeMode');return{searchQueries:list(d.searchQueries,[],'searchQueries'),startUrls,country,sellerCountries,maxListingsPerQuery:num(d.maxListingsPerQuery,60,1,500,'maxListingsPerQuery'),maxSellers:num(d.maxSellers,50,1,200,'maxSellers'),minFeedbackScore:num(d.minFeedbackScore,0,0,1e9,'minFeedbackScore'),minItemsListed:num(d.minItemsListed,1,0,1e6,'minItemsListed'),maxConcurrency:num(d.maxConcurrency,1,1,3,'maxConcurrency'),maxSellerDetailConcurrency:num(d.maxSellerDetailConcurrency,2,1,5,'maxSellerDetailConcurrency'),maxRequestRetries:num(d.maxRequestRetries,2,0,5,'maxRequestRetries'),navigationTimeoutSecs:num(d.navigationTimeoutSecs,60,15,180,'navigationTimeoutSecs'),dedupeMode,dedupeStoreName:typeof d.dedupeStoreName==='string'&&/^[a-zA-Z0-9._-]{3,63}$/.test(d.dedupeStoreName)?d.dedupeStoreName:'ebay-brand-seller-lead-state-v1',proxyConfiguration:d.proxyConfiguration&&typeof d.proxyConfiguration==='object'?d.proxyConfiguration as Record<string,unknown>:{useApifyProxy:false}} }
+import type { ActorInput, DedupeMode, Input } from './types.js';
+
+const EU_COUNTRIES = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'];
+const list = (value: unknown, fallback: string[], field: string): string[] => {
+    const raw = value === undefined ? fallback : value;
+    if (!Array.isArray(raw)) throw new Error(`${field} must be an array`);
+    return [...new Set(raw.map((item) => typeof item === 'string' ? item.trim() : item && typeof item === 'object' && typeof (item as { url?: unknown }).url === 'string' ? String((item as { url: string }).url).trim() : '').filter(Boolean))];
+};
+const integer = (value: unknown, fallback: number, min: number, max: number, field: string): number => {
+    const resolved = value === undefined ? fallback : value;
+    if (!Number.isInteger(resolved) || Number(resolved) < min || Number(resolved) > max) throw new Error(`${field} must be an integer between ${min} and ${max}`);
+    return Number(resolved);
+};
+
+export function normalizeInput(raw: ActorInput | null | undefined): Input {
+    const data = raw ?? {};
+    const startUrls = list(data.startUrls, [], 'startUrls');
+    for (const value of startUrls) {
+        const url = new URL(value);
+        if (url.protocol !== 'https:' || !/(^|\.)ebay\.[a-z.]+$/i.test(url.hostname) || !/\/b\//.test(url.pathname)) throw new Error('startUrls must contain public eBay brand page URLs');
+    }
+    const requestedCountries = list(data.sellerCountries, ['EU'], 'sellerCountries').map((value) => value.toUpperCase());
+    if (requestedCountries.some((value) => value !== 'EU' && !/^[A-Z]{2}$/.test(value))) throw new Error('sellerCountries must contain ISO alpha-2 codes or EU');
+    const sellerCountries = [...new Set(requestedCountries.flatMap((value) => value === 'EU' ? EU_COUNTRIES : value))];
+    const dedupeMode = (data.dedupeMode ?? 'new_and_updated') as DedupeMode;
+    if (!['all', 'new_only', 'new_and_updated'].includes(dedupeMode)) throw new Error('Invalid dedupeMode');
+    return {
+        brands: list(data.brands, [], 'brands'), startUrls, sellerCountries,
+        maxListingsPerBrand: integer(data.maxListingsPerBrand, 30, 1, 200, 'maxListingsPerBrand'),
+        maxItemDetails: integer(data.maxItemDetails, 80, 1, 500, 'maxItemDetails'),
+        maxSellerProfiles: integer(data.maxSellerProfiles, 40, 1, 200, 'maxSellerProfiles'),
+        maxSellers: integer(data.maxSellers, 10, 1, 200, 'maxSellers'),
+        minFeedbackScore: integer(data.minFeedbackScore, 0, 0, 1_000_000_000, 'minFeedbackScore'),
+        minMatchedListings: integer(data.minMatchedListings, 1, 1, 1_000_000, 'minMatchedListings'),
+        maxConcurrency: integer(data.maxConcurrency, 5, 1, 10, 'maxConcurrency'),
+        maxRequestRetries: integer(data.maxRequestRetries, 1, 0, 5, 'maxRequestRetries'),
+        navigationTimeoutSecs: integer(data.navigationTimeoutSecs, 120, 15, 180, 'navigationTimeoutSecs'),
+        dedupeMode,
+        dedupeStoreName: typeof data.dedupeStoreName === 'string' && /^[a-zA-Z0-9._-]{3,63}$/.test(data.dedupeStoreName) ? data.dedupeStoreName : 'ebay-brand-seller-lead-state-v1',
+    };
+}

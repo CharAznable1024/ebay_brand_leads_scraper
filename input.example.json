@@ -1,17 +1,16 @@
 {
-  "searchQueries": ["Gucci"],
+  "brands": ["Gucci"],
   "startUrls": [],
-  "country": "US",
-  "sellerCountries": [],
-  "maxListingsPerQuery": 60,
-  "maxSellers": 25,
+  "sellerCountries": ["EU"],
+  "maxListingsPerBrand": 30,
+  "maxItemDetails": 80,
+  "maxSellerProfiles": 40,
+  "maxSellers": 10,
   "minFeedbackScore": 0,
-  "minItemsListed": 1,
-  "maxConcurrency": 1,
-  "maxSellerDetailConcurrency": 2,
-  "maxRequestRetries": 2,
-  "navigationTimeoutSecs": 60,
+  "minMatchedListings": 1,
+  "maxConcurrency": 5,
+  "maxRequestRetries": 1,
+  "navigationTimeoutSecs": 120,
   "dedupeMode": "new_and_updated",
-  "dedupeStoreName": "ebay-brand-seller-lead-state-v1",
-  "proxyConfiguration": { "useApifyProxy": false }
+  "dedupeStoreName": "ebay-brand-seller-lead-state-v1"
 }

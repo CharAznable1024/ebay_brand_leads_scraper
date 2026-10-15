@@ -1,5 +1,64 @@
-export type Market = 'US'|'GB'|'DE'|'AU'|'CA'; export type DedupeMode = 'all'|'new_only'|'new_and_updated';
-export interface ActorInput { searchQueries?: unknown; startUrls?: unknown; country?: unknown; sellerCountries?: unknown; maxListingsPerQuery?: unknown; maxSellers?: unknown; minFeedbackScore?: unknown; minItemsListed?: unknown; maxConcurrency?: unknown; maxSellerDetailConcurrency?: unknown; maxRequestRetries?: unknown; navigationTimeoutSecs?: unknown; dedupeMode?: unknown; dedupeStoreName?: unknown; proxyConfiguration?: unknown; }
-export interface Input { searchQueries:string[]; startUrls:string[]; country:Market; sellerCountries:string[]; maxListingsPerQuery:number; maxSellers:number; minFeedbackScore:number; minItemsListed:number; maxConcurrency:number; maxSellerDetailConcurrency:number; maxRequestRetries:number; navigationTimeoutSecs:number; dedupeMode:DedupeMode; dedupeStoreName:string; proxyConfiguration:Record<string,unknown>; }
-export interface Listing { item_url:string; title:string|null; brand:string|null; category:string|null; seller_id:string|null; seller_name:string|null; }
-export interface Detail { seller_id:string; seller_name:string|null; profile_url:string; feedback_score:number|null; seller_country:string|null; seller_country_code:string|null; }
+export type DedupeMode = 'all' | 'new_only' | 'new_and_updated';
+
+export interface ActorInput {
+    brands?: unknown;
+    startUrls?: unknown;
+    sellerCountries?: unknown;
+    maxListingsPerBrand?: unknown;
+    maxItemDetails?: unknown;
+    maxSellerProfiles?: unknown;
+    maxSellers?: unknown;
+    minFeedbackScore?: unknown;
+    minMatchedListings?: unknown;
+    maxConcurrency?: unknown;
+    maxRequestRetries?: unknown;
+    navigationTimeoutSecs?: unknown;
+    dedupeMode?: unknown;
+    dedupeStoreName?: unknown;
+}
+
+export interface Input {
+    brands: string[];
+    startUrls: string[];
+    sellerCountries: string[];
+    maxListingsPerBrand: number;
+    maxItemDetails: number;
+    maxSellerProfiles: number;
+    maxSellers: number;
+    minFeedbackScore: number;
+    minMatchedListings: number;
+    maxConcurrency: number;
+    maxRequestRetries: number;
+    navigationTimeoutSecs: number;
+    dedupeMode: DedupeMode;
+    dedupeStoreName: string;
+}
+
+export interface BrandSource { brand: string; brand_url: string }
+export interface ItemEvidence { item_url: string; brand: string; category: string | null }
+export interface SellerCandidate {
+    seller_id: string;
+    seller_name: string;
+    profile_url: string;
+    brands: string[];
+    categories: string[];
+    item_urls: string[];
+}
+
+export interface PublicProfileStats {
+    feedback_rate: number | null;
+    feedback_score: number | null;
+    feedback_positive_12m: number | null;
+    feedback_neutral_12m: number | null;
+    feedback_negative_12m: number | null;
+    rating_accurate_description: number | null;
+    rating_shipping_cost: number | null;
+    rating_shipping_speed: number | null;
+    rating_communication: number | null;
+    items_sold: number | null;
+    items_listed: number | null;
+    follower_count: number | null;
+    seller_country: string | null;
+    seller_country_code: string | null;
+    stats_source: 'seller_profile';
+}
