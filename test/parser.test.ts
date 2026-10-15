@@ -22,7 +22,7 @@ describe('eBay brand discovery parser', () => {
 
     it('extracts and merges sellers from item pages', () => {
         const item = { item_url: 'https://www.ebay.com/itm/123456789012', brand: 'Gucci', category: null };
-        const first = parseSellerFromItem('<a href="https://www.ebay.com/usr/vintage-shop">Seller</a><script>{"category":"Handbags"}</script>', item)!;
+        const first = parseSellerFromItem('<a href="https://www.ebay.com/usr/vintage-shop">Seller</a><script>{"category":"Category","categoryName":"Handbags"}</script>', item)!;
         const second = { ...first, brands: ['Prada'], categories: ['Clothing'], item_urls: ['https://www.ebay.com/itm/2'] };
         expect(mergeSellerCandidate(first, second)).toMatchObject({ seller_id: 'vintage-shop', brands: ['Gucci', 'Prada'], categories: ['Handbags', 'Clothing'] });
     });

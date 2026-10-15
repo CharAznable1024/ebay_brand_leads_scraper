@@ -53,7 +53,8 @@ export function parseSellerFromItem(html: string, item: ItemEvidence): SellerCan
     const embedded = decoded.match(/"(?:sellerUsername|userAccountName|sellerName)"\s*:\s*"([^"\\]+)"/i)?.[1] ?? null;
     const username = profileHref ? decodeURIComponent(new URL(profileHref, item.item_url).pathname.match(/\/usr\/([^/?#]+)/i)?.[1] ?? '') : embedded;
     if (!username) return null;
-    const category = decoded.match(/"category"\s*:\s*"([^"\\]+)"/i)?.[1] ?? decoded.match(/"categoryName"\s*:\s*"([^"\\]+)"/i)?.[1] ?? item.category;
+    const categoryValues = [...decoded.matchAll(/"(?:category|categoryName)"\s*:\s*"([^"\\]+)"/gi)].map((match) => decode(match[1])).filter((value) => value && !/^categor(?:y|ies)$/i.test(value));
+    const category = categoryValues[0] ?? item.category;
     return { seller_id: username.toLowerCase(), seller_name: username, profile_url: `https://www.ebay.com/usr/${encodeURIComponent(username)}`, brands: [item.brand], categories: category ? [decode(category)] : [], item_urls: [item.item_url] };
 }
 
