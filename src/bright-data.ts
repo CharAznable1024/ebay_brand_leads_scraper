@@ -1,11 +1,31 @@
-export interface WebUnlockerOptions { apiKey: string; zone: string; country: string; timeoutMillis: number; maxAttempts?: number; render?: boolean }
+export interface WebUnlockerOptions { apiKey: string; zone: string; country: string; timeoutMillis: number; maxAttempts?: number; retryDelayMillis?: number; render?: boolean }
 export interface WebUnlockerResult { html: string; status_code: number; content_type: string | null; bright_data_error: string | null }
+export interface WebUnlockerUsage {
+    logical_requests: number;
+    request_attempts: number;
+    successful_requests: number;
+    failed_attempts: number;
+    static_attempts: number;
+    rendered_attempts: number;
+    estimated_cost_usd: number;
+}
 type Fetch = typeof fetch;
 
-export async function fetchWithWebUnlocker(targetUrl: string, options: WebUnlockerOptions, fetcher: Fetch = fetch): Promise<WebUnlockerResult> {
-    const maximum = Math.max(1, options.maxAttempts ?? 2);
+export function createWebUnlockerUsage(): WebUnlockerUsage {
+    return { logical_requests: 0, request_attempts: 0, successful_requests: 0, failed_attempts: 0, static_attempts: 0, rendered_attempts: 0, estimated_cost_usd: 0 };
+}
+
+export async function fetchWithWebUnlocker(targetUrl: string, options: WebUnlockerOptions, fetcher: Fetch = fetch, usage?: WebUnlockerUsage): Promise<WebUnlockerResult> {
+    let maximum = Math.max(1, options.maxAttempts ?? 2);
+    let adaptiveRetryGranted = false;
     let lastError: unknown;
+    if (usage) usage.logical_requests += 1;
     for (let attempt = 1; attempt <= maximum; attempt += 1) {
+        if (usage) {
+            usage.request_attempts += 1;
+            if (options.render ?? true) usage.rendered_attempts += 1;
+            else usage.static_attempts += 1;
+        }
         try {
             const response = await fetcher('https://api.brightdata.com/request', {
                 method: 'POST', headers: { Authorization: `Bearer ${options.apiKey}`, 'Content-Type': 'application/json' },
@@ -22,10 +42,19 @@ export async function fetchWithWebUnlocker(targetUrl: string, options: WebUnlock
             const result = { html, status_code: statusCode, content_type: response.headers.get('content-type'), bright_data_error: response.headers.get('x-brd-error') };
             if (result.bright_data_error) throw new Error(`Bright Data error: ${result.bright_data_error}`);
             if (!html.trim()) throw new Error(`Web Unlocker returned an empty body with HTTP ${statusCode}`);
+            if (usage) {
+                usage.successful_requests += 1;
+                usage.estimated_cost_usd = Number((usage.successful_requests * 0.0015).toFixed(6));
+            }
             return result;
         } catch (error) {
             lastError = error;
-            if (attempt < maximum) await new Promise((resolve) => setTimeout(resolve, attempt * 5_000));
+            if (usage) usage.failed_attempts += 1;
+            if (/adaptive rate limit/i.test(String(error)) && !adaptiveRetryGranted) {
+                adaptiveRetryGranted = true;
+                maximum += 1;
+            }
+            if (attempt < maximum) await new Promise((resolve) => setTimeout(resolve, attempt * (options.retryDelayMillis ?? 5_000)));
         }
     }
     throw lastError;

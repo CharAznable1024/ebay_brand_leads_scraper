@@ -48,14 +48,22 @@ export function parseBrandItems(html: string, pageUrl: string, brand: string, ma
 }
 
 export function parseSellerFromItem(html: string, item: ItemEvidence): SellerCandidate | null {
-    const decoded = html.replace(/&quot;/gi, '"').replace(/&amp;/gi, '&');
-    const profileHref = anchors(decoded).map((link) => link.href).find((href) => /\/usr\/[^/?#"']+/i.test(href));
+    const decoded = html.replace(/&quot;/gi, '"').replace(/&amp;/gi, '&').replace(/\\\//g, '/');
+    const hrefs = anchors(decoded).map((link) => link.href);
+    const profileHref = hrefs.find((href) => /\/usr\/[^/?#"']+/i.test(href));
+    const storeHref = hrefs.find((href) => /\/str\/[^/?#"']+/i.test(href));
     const embedded = decoded.match(/"(?:sellerUsername|userAccountName|sellerName)"\s*:\s*"([^"\\]+)"/i)?.[1] ?? null;
-    const username = profileHref ? decodeURIComponent(new URL(profileHref, item.item_url).pathname.match(/\/usr\/([^/?#]+)/i)?.[1] ?? '') : embedded;
+    const username = embedded || (profileHref ? decodeURIComponent(new URL(profileHref, item.item_url).pathname.match(/\/usr\/([^/?#]+)/i)?.[1] ?? '') : '') || (storeHref ? decodeURIComponent(new URL(storeHref, item.item_url).pathname.match(/\/str\/([^/?#]+)/i)?.[1] ?? '') : '');
     if (!username) return null;
+    const storeUrl = storeHref ? new URL(storeHref, item.item_url) : null;
+    if (storeUrl) {
+        storeUrl.hostname = 'www.ebay.com';
+        storeUrl.search = '';
+        storeUrl.hash = '';
+    }
     const categoryValues = [...decoded.matchAll(/"(?:category|categoryName)"\s*:\s*"([^"\\]+)"/gi)].map((match) => decode(match[1])).filter((value) => value && !/^categor(?:y|ies)$/i.test(value));
     const category = categoryValues[0] ?? item.category;
-    return { seller_id: username.toLowerCase(), seller_name: username, profile_url: `https://www.ebay.com/usr/${encodeURIComponent(username)}`, brands: [item.brand], categories: category ? [decode(category)] : [], item_urls: [item.item_url] };
+    return { seller_id: username.toLowerCase(), seller_name: username, profile_url: storeUrl?.toString() ?? `https://www.ebay.com/usr/${encodeURIComponent(username)}`, brands: [item.brand], categories: category ? [decode(category)] : [], item_urls: [item.item_url] };
 }
 
 export function mergeSellerCandidate(target: SellerCandidate, source: SellerCandidate): SellerCandidate {

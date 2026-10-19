@@ -1,6 +1,10 @@
 {
   "brands": ["Gucci"],
-  "startUrls": [],
+  "startUrls": [
+    {
+      "url": "https://www.ebay.com/b/Gucci/bn_21826083?LH_PrefLoc=5&mag=1"
+    }
+  ],
   "sellerCountries": ["EU"],
   "maxListingsPerBrand": 30,
   "maxItemDetails": 80,
@@ -10,8 +14,8 @@
   "minMatchedListings": 1,
   "maxConcurrency": 5,
   "maxProfileConcurrency": 1,
-  "maxRequestRetries": 1,
-  "navigationTimeoutSecs": 120,
+  "maxRequestRetries": 0,
+  "navigationTimeoutSecs": 60,
   "dedupeMode": "new_and_updated",
   "dedupeStoreName": "ebay-brand-seller-lead-state-v1"
 }

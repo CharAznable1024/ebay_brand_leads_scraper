@@ -26,4 +26,14 @@ describe('eBay brand discovery parser', () => {
         const second = { ...first, brands: ['Prada'], categories: ['Clothing'], item_urls: ['https://www.ebay.com/itm/2'] };
         expect(mergeSellerCandidate(first, second)).toMatchObject({ seller_id: 'vintage-shop', brands: ['Gucci', 'Prada'], categories: ['Handbags', 'Clothing'] });
     });
+
+    it('prefers the embedded seller and public store over unrelated user links', () => {
+        const item = { item_url: 'https://www.ebay.com/itm/800795502918', brand: 'Gucci', category: null };
+        const html = '<a href="https://www.ebay.com/usr/unrelated-recommendation">Other seller</a><a href="https://www.ebay.com/str/jewelrydeals4ucom?x=1">Visit store</a><script>{"sellerUsername":"jewelrydeals4u"}</script>';
+        expect(parseSellerFromItem(html, item)).toMatchObject({
+            seller_id: 'jewelrydeals4u',
+            seller_name: 'jewelrydeals4u',
+            profile_url: 'https://www.ebay.com/str/jewelrydeals4ucom',
+        });
+    });
 });

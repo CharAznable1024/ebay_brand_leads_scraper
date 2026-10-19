@@ -8,5 +8,7 @@ describe('input', () => {
         expect(input.sellerCountries).toEqual(expect.arrayContaining(['DE', 'FR', 'IT', 'SE']));
         expect(input.sellerCountries).not.toContain('GB');
         expect(input.maxProfileConcurrency).toBe(1);
+        expect(input.maxRequestRetries).toBe(0);
+        expect(input.navigationTimeoutSecs).toBe(60);
     });
 });

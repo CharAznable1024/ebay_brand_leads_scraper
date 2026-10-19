@@ -34,8 +34,8 @@ export function normalizeInput(raw: ActorInput | null | undefined): Input {
         minMatchedListings: integer(data.minMatchedListings, 1, 1, 1_000_000, 'minMatchedListings'),
         maxConcurrency: integer(data.maxConcurrency, 5, 1, 10, 'maxConcurrency'),
         maxProfileConcurrency: integer(data.maxProfileConcurrency, 1, 1, 3, 'maxProfileConcurrency'),
-        maxRequestRetries: integer(data.maxRequestRetries, 1, 0, 5, 'maxRequestRetries'),
-        navigationTimeoutSecs: integer(data.navigationTimeoutSecs, 120, 15, 180, 'navigationTimeoutSecs'),
+        maxRequestRetries: integer(data.maxRequestRetries, 0, 0, 5, 'maxRequestRetries'),
+        navigationTimeoutSecs: integer(data.navigationTimeoutSecs, 60, 15, 180, 'navigationTimeoutSecs'),
         dedupeMode,
         dedupeStoreName: typeof data.dedupeStoreName === 'string' && /^[a-zA-Z0-9._-]{3,63}$/.test(data.dedupeStoreName) ? data.dedupeStoreName : 'ebay-brand-seller-lead-state-v1',
     };
