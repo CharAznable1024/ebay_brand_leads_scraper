@@ -1,10 +1,18 @@
 {
   "actorSpecification": 1,
-  "fields": {},
+  "fields": {
+    "type": "object",
+    "properties": {
+      "campaign_id": { "type": ["string", "null"] },
+      "shard_id": { "type": ["string", "null"] },
+      "run_id": { "type": "string" },
+      "seller_id": { "type": "string" }
+    }
+  },
   "views": {
     "overview": {
       "title": "eBay EU brand seller leads",
-      "transformation": { "fields": ["seller_name", "profile_url", "seller_country", "brands", "categories", "matched_listing_count", "items_sold", "items_listed", "follower_count", "feedback_rate", "feedback_score", "feedback_positive_12m", "feedback_neutral_12m", "feedback_negative_12m", "rating_accurate_description", "rating_shipping_cost", "rating_shipping_speed", "rating_communication", "lead_score", "sample_listing_urls"] },
+      "transformation": { "fields": ["campaign_id", "shard_id", "run_id", "seller_name", "profile_url", "seller_country", "brands", "categories", "matched_listing_count", "items_sold", "items_listed", "follower_count", "feedback_rate", "feedback_score", "feedback_positive_12m", "feedback_neutral_12m", "feedback_negative_12m", "rating_accurate_description", "rating_shipping_cost", "rating_shipping_speed", "rating_communication", "lead_score", "sample_listing_urls"] },
       "display": { "component": "table", "properties": {} }
     }
   }

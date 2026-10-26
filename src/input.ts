@@ -11,6 +11,13 @@ const integer = (value: unknown, fallback: number, min: number, max: number, fie
     if (!Number.isInteger(resolved) || Number(resolved) < min || Number(resolved) > max) throw new Error(`${field} must be an integer between ${min} and ${max}`);
     return Number(resolved);
 };
+const optionalIdentifier = (value: unknown, field: string): string | null => {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== 'string') throw new Error(`${field} must be a string`);
+    const resolved = value.trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(resolved)) throw new Error(`${field} is invalid`);
+    return resolved;
+};
 
 export function normalizeInput(raw: ActorInput | null | undefined): Input {
     const data = raw ?? {};
@@ -25,6 +32,8 @@ export function normalizeInput(raw: ActorInput | null | undefined): Input {
     const dedupeMode = (data.dedupeMode ?? 'new_and_updated') as DedupeMode;
     if (!['all', 'new_only', 'new_and_updated'].includes(dedupeMode)) throw new Error('Invalid dedupeMode');
     return {
+        campaignId: optionalIdentifier(data.campaignId, 'campaignId'),
+        shardId: optionalIdentifier(data.shardId, 'shardId'),
         brands: list(data.brands, [], 'brands'), startUrls, sellerCountries,
         maxListingsPerBrand: integer(data.maxListingsPerBrand, 30, 1, 200, 'maxListingsPerBrand'),
         maxItemDetails: integer(data.maxItemDetails, 80, 1, 500, 'maxItemDetails'),

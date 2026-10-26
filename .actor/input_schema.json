@@ -5,6 +5,10 @@
   "type": "object",
   "schemaVersion": 1,
   "properties": {
+    "campaignId": { "title": "Aime campaign ID", "type": "string", "description": "Optional Campaign identifier passed through to Dataset, OUTPUT and PROGRESS.", "editor": "textfield", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", "maxLength": 128 },
+    "shardId": { "title": "Aime shard ID", "type": "string", "description": "Optional shard identifier passed through to Dataset, OUTPUT and PROGRESS.", "editor": "textfield", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", "maxLength": 128 },
+    "campaignId": { "title": "Aime campaign ID", "type": "string", "description": "Optional Campaign identifier passed through to Dataset, OUTPUT and PROGRESS.", "editor": "textfield", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", "maxLength": 128 },
+    "shardId": { "title": "Aime shard ID", "type": "string", "description": "Optional shard identifier passed through to Dataset, OUTPUT and PROGRESS.", "editor": "textfield", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", "maxLength": 128 },
     "brands": { "title": "Brands", "type": "array", "description": "Exact brand names from https://www.ebay.com/n/all-brands, for example Gucci, PRADA or CHANEL.", "editor": "stringList", "default": ["Gucci"], "items": { "type": "string" } },
     "startUrls": { "title": "Brand page URLs", "type": "array", "description": "Optional eBay /b/<brand>/bn_<id> URLs. In API requests, pass request objects such as [{\"url\":\"https://www.ebay.com/b/Gucci/bn_21826083?LH_PrefLoc=5&mag=1\"}].", "editor": "requestListSources", "default": [], "items": { "type": "object", "properties": { "url": { "title": "URL", "type": "string", "description": "Public eBay brand page URL." } }, "required": ["url"] } },
     "sellerCountries": { "title": "Seller countries", "type": "array", "description": "EU by default. Enter EU or ISO alpha-2 country codes; seller country is verified from the public About page.", "editor": "stringList", "default": ["EU"], "items": { "type": "string", "pattern": "^(EU|[A-Za-z]{2})$" } },

@@ -10,6 +10,10 @@ A seller is emitted only after both its public country and `items_sold` value ha
 
 eBay brand, item, and seller pages block data-center browsers, so the Actor requires the existing `BRIGHT_DATA_API_KEY` Apify secret and uses the `ebay_live_unlocker` Web Unlocker zone.
 
+## Aime shard tracing and timeout safety
+
+Optional `campaignId` and `shardId` inputs are copied to every Dataset row as `campaign_id` and `shard_id`. The Actor reads `run_id` and `dataset_id` from the current Apify runtime. Each qualified seller is pushed immediately instead of waiting for the Run to finish, and OUTPUT/PROGRESS expose `scanned_count`, `qualified_count`, `next_cursor`, and `has_more`. If the Run times out, already checkpointed Dataset rows remain available; Aime should aggregate and deduplicate by `campaign_id + seller_id`.
+
 ## Request-efficient execution
 
 The Actor processes small item batches, verifies sellers as soon as they are discovered, and stops once `maxSellers` leads have actually passed country, threshold, and deduplication checks. It no longer opens every item and every seller profile before applying the output limit.

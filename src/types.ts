@@ -1,6 +1,8 @@
 export type DedupeMode = 'all' | 'new_only' | 'new_and_updated';
 
 export interface ActorInput {
+    campaignId?: unknown;
+    shardId?: unknown;
     brands?: unknown;
     startUrls?: unknown;
     sellerCountries?: unknown;
@@ -19,6 +21,8 @@ export interface ActorInput {
 }
 
 export interface Input {
+    campaignId: string | null;
+    shardId: string | null;
     brands: string[];
     startUrls: string[];
     sellerCountries: string[];

@@ -20,7 +20,7 @@ function normalizeBrandKey(value: string): string {
     return value.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-function buildLead(candidate: SellerCandidate, stats: PublicProfileStats, scrapedAt: string) {
+function buildLead(candidate: SellerCandidate, stats: PublicProfileStats, scrapedAt: string, campaignId: string | null, shardId: string | null, runId: string) {
     const feedback = stats.feedback_score ?? 0;
     const matched = candidate.item_urls.length;
     const score = Math.min(100,
@@ -32,6 +32,9 @@ function buildLead(candidate: SellerCandidate, stats: PublicProfileStats, scrape
         record_type: 'ebay_brand_seller_lead',
         schema_version: '1.2',
         platform: 'ebay',
+        campaign_id: campaignId,
+        shard_id: shardId,
+        run_id: runId,
         seller_id: candidate.seller_id,
         seller_name: candidate.seller_name,
         seller_username: candidate.seller_name,
@@ -63,6 +66,8 @@ function buildLead(candidate: SellerCandidate, stats: PublicProfileStats, scrape
 
 await Actor.init();
 const input = normalizeInput(await Actor.getInput<ActorInput>());
+const runId = process.env.APIFY_ACTOR_RUN_ID?.trim() || process.env.ACTOR_RUN_ID?.trim() || 'local';
+const datasetId = process.env.APIFY_DEFAULT_DATASET_ID?.trim() || process.env.ACTOR_DEFAULT_DATASET_ID?.trim() || 'default';
 const apiKey = process.env.BRIGHT_DATA_API_KEY?.trim();
 const zone = process.env.BRIGHT_DATA_ZONE?.trim() || 'ebay_live_unlocker';
 if (!apiKey) throw new Error('BRIGHT_DATA_API_KEY is required because eBay brand, item, and profile pages block data-center browsers.');
@@ -170,6 +175,50 @@ let aboutSucceeded = 0;
 let feedbackAttempted = 0;
 let feedbackSucceeded = 0;
 
+const output = (status: 'RUNNING' | 'SUCCEEDED' | 'ABORTED') => ({
+    status,
+    campaign_id: input.campaignId,
+    shard_id: input.shardId,
+    run_id: runId,
+    dataset_id: datasetId,
+    scanned_count: attemptedSellerIds.size,
+    qualified_count: emitted.length,
+    next_cursor: null,
+    has_more: status !== 'SUCCEEDED' && emitted.length < input.maxSellers,
+    brand_sources: sources.length,
+    europe_filtered_items: itemEvidence.length,
+    item_details_attempted: itemDetailsAttempted,
+    item_sellers_extracted: itemSellersExtracted,
+    seller_candidates: candidates.size,
+    seller_profiles_attempted: attemptedSellerIds.size,
+    seller_profiles_succeeded: sellerProfilesSucceeded,
+    seller_profiles_failed: sellerProfilesFailed,
+    about_enrichment_attempted: aboutAttempted,
+    about_enrichment_succeeded: aboutSucceeded,
+    feedback_enrichment_attempted: feedbackAttempted,
+    feedback_enrichment_succeeded: feedbackSucceeded,
+    qualified_before_dedupe: qualifiedBeforeDedupe,
+    dedupe_filtered: dedupeFiltered,
+    qualified_leads: emitted.length,
+    stopped_early: emitted.length >= input.maxSellers && itemDetailsAttempted < itemEvidence.length,
+    bright_data: brightDataUsage,
+    scraped_at: scrapedAt,
+});
+
+async function persistProgress(status: 'RUNNING' | 'SUCCEEDED' | 'ABORTED'): Promise<void> {
+    const value = output(status);
+    await Actor.setValue('OUTPUT', value);
+    await Actor.setValue('PROGRESS', value);
+}
+
+Actor.on('aborting', async () => {
+    log.warning('Run is aborting; preserving checkpointed brand leads.');
+    await persistProgress('ABORTED');
+    await Actor.exit();
+});
+
+await persistProgress('RUNNING');
+
 async function enrichCandidate(candidate: SellerCandidate): Promise<PublicProfileStats | null> {
     log.info('Enriching eBay seller profile', { seller: candidate.seller_id, profileAttempt: attemptedSellerIds.size, profileLimit: input.maxSellerProfiles });
     try {
@@ -218,7 +267,7 @@ async function enrichCandidate(candidate: SellerCandidate): Promise<PublicProfil
 async function emitIfQualified(candidate: SellerCandidate, stats: PublicProfileStats | null): Promise<void> {
     if (!stats || stats.items_sold === null || candidate.item_urls.length < input.minMatchedListings || (stats.feedback_score ?? 0) < input.minFeedbackScore || !stats.seller_country_code || !input.sellerCountries.includes(stats.seller_country_code)) return;
     qualifiedBeforeDedupe += 1;
-    const lead = buildLead(candidate, stats, scrapedAt);
+    const lead = buildLead(candidate, stats, scrapedAt, input.campaignId, input.shardId, runId);
     const key = `seller-${lead.seller_id}`.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 240);
     const fingerprint = createHash('sha256').update(JSON.stringify({ country: lead.seller_country_code, sold: lead.items_sold, feedback: lead.feedback_score, brands: lead.brands })).digest('hex');
     const previous = await state.getValue<{ fingerprint: string }>(key);
@@ -233,6 +282,8 @@ async function emitIfQualified(candidate: SellerCandidate, stats: PublicProfileS
         return;
     }
     emitted.push(lead);
+    await Actor.pushData(lead);
+    await persistProgress('RUNNING');
     log.info('Qualified eBay brand seller lead', { seller: lead.seller_id, country: lead.seller_country_code, itemsSold: lead.items_sold, leadCount: emitted.length, target: input.maxSellers });
 }
 
@@ -291,29 +342,6 @@ for (let offset = 0; offset < itemEvidence.length; offset += itemBatchSize) {
 }
 
 await Actor.setValue('SELLER_ENRICHMENT_DEBUG', enrichmentDebug);
-await Actor.pushData(emitted);
-const stoppedEarly = emitted.length >= input.maxSellers && itemDetailsAttempted < itemEvidence.length;
-const output = {
-    status: 'SUCCEEDED',
-    brand_sources: sources.length,
-    europe_filtered_items: itemEvidence.length,
-    item_details_attempted: itemDetailsAttempted,
-    item_sellers_extracted: itemSellersExtracted,
-    seller_candidates: candidates.size,
-    seller_profiles_attempted: attemptedSellerIds.size,
-    seller_profiles_succeeded: sellerProfilesSucceeded,
-    seller_profiles_failed: sellerProfilesFailed,
-    about_enrichment_attempted: aboutAttempted,
-    about_enrichment_succeeded: aboutSucceeded,
-    feedback_enrichment_attempted: feedbackAttempted,
-    feedback_enrichment_succeeded: feedbackSucceeded,
-    qualified_before_dedupe: qualifiedBeforeDedupe,
-    dedupe_filtered: dedupeFiltered,
-    qualified_leads: emitted.length,
-    stopped_early: stoppedEarly,
-    bright_data: brightDataUsage,
-    scraped_at: scrapedAt,
-};
-await Actor.setValue('OUTPUT', output);
-log.info('Finished eBay brand seller discovery', output);
+await persistProgress('SUCCEEDED');
+log.info('Finished eBay brand seller discovery', output('SUCCEEDED'));
 await Actor.exit();
