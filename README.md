@@ -1,6 +1,6 @@
 # eBay EU Brand Seller Lead Scraper
 
-This Actor starts from eBay's public [All Brands](https://www.ebay.com/n/all-brands) directory, resolves requested brand pages, applies the public **Item location: Europe** filter, opens representative product pages to identify sellers, and enriches each seller through the same public Profile, About and Feedback pages used by the eBay Live Actor.
+This Actor starts from cached public eBay brand pages, public brand search, or explicitly supplied brand pages, applies the public **Item location: Europe** filter, opens representative product pages to identify sellers, and enriches each seller through the same public Profile, About and Feedback pages used by the eBay Live Actor. Brand names no longer depend on the slow All Brands directory at runtime. The default portfolio and PRADA use verified `/b/<brand>/bn_<id>` pages; other names fall back to a direct search source.
 
 `brands` and `startUrls` are optional. When both are empty, the Actor automatically uses a balanced default portfolio (`Gucci`, `CHANEL`, `Nike`, and `Apple`) so a caller can request seller leads with only `maxSellers` and qualification filters.
 

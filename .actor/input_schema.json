@@ -1,13 +1,13 @@
 {
   "$schema": "https://apify.com/schemas/v1/input.ide.json",
   "title": "eBay EU brand seller discovery",
-  "description": "Find sellers from eBay All Brands pages, restrict item evidence to Europe, then verify public seller profiles.",
+  "description": "Find sellers from public eBay brand searches or brand pages, restrict item evidence to Europe, then verify public seller profiles.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "campaignId": { "title": "Aime campaign ID", "type": "string", "description": "Optional Campaign identifier passed through to Dataset, OUTPUT and PROGRESS.", "editor": "textfield", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", "maxLength": 128 },
     "shardId": { "title": "Aime shard ID", "type": "string", "description": "Optional shard identifier passed through to Dataset, OUTPUT and PROGRESS.", "editor": "textfield", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", "maxLength": 128 },
-    "brands": { "title": "Brands", "type": "array", "description": "Optional exact brand names from https://www.ebay.com/n/all-brands. Leave empty together with startUrls to use the balanced default portfolio: Gucci, CHANEL, Nike and Apple.", "editor": "stringList", "default": [], "items": { "type": "string" } },
+    "brands": { "title": "Brands", "type": "array", "description": "Optional brand names converted directly into eBay UK search sources. Leave empty together with startUrls to use the balanced default portfolio: Gucci, CHANEL, Nike and Apple.", "editor": "stringList", "default": [], "items": { "type": "string" } },
     "startUrls": { "title": "Brand page URLs", "type": "array", "description": "Optional eBay /b/<brand>/bn_<id> URLs. In API requests, pass request objects such as [{\"url\":\"https://www.ebay.com/b/Gucci/bn_21826083?LH_PrefLoc=5&mag=1\"}].", "editor": "requestListSources", "default": [], "items": { "type": "object", "properties": { "url": { "title": "URL", "type": "string", "description": "Public eBay brand page URL." } }, "required": ["url"] } },
     "sellerCountries": { "title": "Seller countries", "type": "array", "description": "United Kingdom (GB) by default. Enter EU or ISO alpha-2 country codes; UK is normalized to GB. Seller country is verified from the public About page.", "editor": "stringList", "default": ["GB"], "items": { "type": "string", "pattern": "^(EU|[A-Za-z]{2})$" } },
     "maxListingsPerBrand": { "title": "Listings per brand", "description": "Maximum Europe-filtered product links sampled from each selected brand page.", "type": "integer", "default": 30, "minimum": 1, "maximum": 200 },

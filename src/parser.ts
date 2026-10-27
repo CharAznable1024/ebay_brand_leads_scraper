@@ -4,6 +4,27 @@ const decode = (value: string): string => value.replace(/&amp;/gi, '&').replace(
 const normalize = (value: string): string => value.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '');
 const anchors = (html: string): Array<{ href: string; label: string }> => [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)].map((match) => ({ href: match[1].replace(/&amp;/gi, '&'), label: decode(match[2]) }));
 const ebayCom = (raw: string, base: string): string => { const url = new URL(raw, base); if (/(^|\.)ebay\.[a-z.]+$/i.test(url.hostname)) url.hostname = 'www.ebay.com'; return url.toString(); };
+const ebayMarketplace = (raw: string, base: string): string => { const url = new URL(raw, base); const marketplace = new URL(base); if (/(^|\.)ebay\.[a-z.]+$/i.test(url.hostname)) url.hostname = marketplace.hostname; return url.toString(); };
+
+const KNOWN_BRAND_PAGES: Record<string, string> = {
+    apple: 'https://www.ebay.com/b/Apple/bn_21819543',
+    chanel: 'https://www.ebay.com/b/CHANEL/bn_21822039',
+    gucci: 'https://www.ebay.com/b/Gucci/bn_21826083',
+    nike: 'https://www.ebay.com/b/Nike/bn_21831651',
+    prada: 'https://www.ebay.com/b/PRADA/bn_21833299',
+};
+
+export function brandSearchUrl(brand: string, marketplace = 'https://www.ebay.com'): string {
+    const url = new URL('/sch/i.html', marketplace);
+    url.searchParams.set('_nkw', brand);
+    url.searchParams.set('LH_PrefLoc', '5');
+    url.searchParams.set('mag', '1');
+    return url.toString();
+}
+
+export function brandSourceUrl(brand: string): string {
+    return KNOWN_BRAND_PAGES[normalize(brand)] ?? brandSearchUrl(brand);
+}
 
 export function parseBrandDirectory(html: string, requestedBrands: string[], baseUrl: string): BrandSource[] {
     const available = anchors(html).filter((link) => /\/b\/[^/?#]+\/bn_\d+/i.test(new URL(link.href, baseUrl).pathname));
@@ -25,15 +46,15 @@ export function brandNameFromUrl(raw: string): string {
 
 export function findEuropeFilterUrl(html: string, baseUrl: string): string | null {
     const found = anchors(html).find((link) => /^europe$/i.test(link.label) || /item location\s*europe/i.test(link.label));
-    if (found) return ebayCom(found.href, baseUrl);
+    if (found) return ebayMarketplace(found.href, baseUrl);
     const index = html.search(/>\s*Europe\s*</i);
     if (index >= 0) {
         const fragment = html.slice(Math.max(0, index - 2_000), index + 2_000);
         const hrefs = [...fragment.matchAll(/href=["']([^"']+)["']/gi)];
         const closest = hrefs.at(-1)?.[1];
-        if (closest) return ebayCom(closest, baseUrl);
+        if (closest) return ebayMarketplace(closest, baseUrl);
     }
-    const fallback = new URL(baseUrl); fallback.searchParams.set('LH_PrefLoc', '5'); fallback.searchParams.set('mag', '1'); return ebayCom(fallback.toString(), baseUrl);
+    const fallback = new URL(baseUrl); fallback.searchParams.set('LH_PrefLoc', '5'); fallback.searchParams.set('mag', '1'); return ebayMarketplace(fallback.toString(), baseUrl);
 }
 
 export function parseBrandItems(html: string, pageUrl: string, brand: string, maximum: number): ItemEvidence[] {

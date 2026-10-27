@@ -3,7 +3,7 @@ import { Actor, log } from 'apify';
 
 import { createWebUnlockerUsage, fetchWithWebUnlocker, htmlToVisibleText, inspectUnlockedPage } from './bright-data.js';
 import { normalizeInput } from './input.js';
-import { brandNameFromUrl, findEuropeFilterUrl, mergeSellerCandidate, parseBrandDirectory, parseBrandItems, parseSellerFromItem } from './parser.js';
+import { brandNameFromUrl, brandSourceUrl, findEuropeFilterUrl, mergeSellerCandidate, parseBrandItems, parseSellerFromItem } from './parser.js';
 import { createSerialGate, mapConcurrent, roundRobinItems, selectPendingCandidates } from './pipeline.js';
 import { findAboutUrl, findFeedbackUrl, mergeStats, needsFeedbackEnrichment, parsePublicProfileText } from './profile.js';
 import type { ActorInput, BrandSource, PublicProfileStats, SellerCandidate } from './types.js';
@@ -14,10 +14,6 @@ function hasProfileSignals(stats: PublicProfileStats): boolean {
 
 function hasFeedbackSignals(stats: PublicProfileStats): boolean {
     return [stats.feedback_score, stats.feedback_positive_12m, stats.feedback_neutral_12m, stats.feedback_negative_12m, stats.rating_accurate_description].some((value) => value !== null);
-}
-
-function normalizeBrandKey(value: string): string {
-    return value.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
 function buildLead(candidate: SellerCandidate, stats: PublicProfileStats, scrapedAt: string, campaignId: string | null, shardId: string | null, runId: string) {
@@ -73,10 +69,11 @@ const zone = process.env.BRIGHT_DATA_ZONE?.trim() || 'ebay_live_unlocker';
 if (!apiKey) throw new Error('BRIGHT_DATA_API_KEY is required because eBay brand, item, and profile pages block data-center browsers.');
 const brightDataUsage = createWebUnlockerUsage();
 const runWebUnlockerRequest = createSerialGate(3_000);
+const unlockerCountry = input.sellerCountries.includes('GB') ? 'GB' : input.sellerCountries[0] ?? 'GB';
 const fetchPage = (url: string, render = false, timeoutSecs = input.navigationTimeoutSecs) => runWebUnlockerRequest(() => fetchWithWebUnlocker(url, {
     apiKey,
     zone,
-    country: 'US',
+    country: unlockerCountry,
     timeoutMillis: timeoutSecs * 1_000,
     maxAttempts: input.maxRequestRetries + 1,
     render,
@@ -114,22 +111,10 @@ log.info('Starting eBay brand seller discovery', {
     retries: input.maxRequestRetries,
 });
 
-let sources: BrandSource[] = input.startUrls.map((brandUrl) => ({ brand: brandNameFromUrl(brandUrl), brand_url: brandUrl }));
-const alreadyResolved = new Set(sources.map((source) => normalizeBrandKey(source.brand)));
-const unresolvedBrands = input.brands.filter((brand) => !alreadyResolved.has(normalizeBrandKey(brand)));
-if (unresolvedBrands.length) {
-    const directoryUrl = 'https://www.ebay.com/n/all-brands';
-    let directory = await fetchPage(directoryUrl, false);
-    let discovered = parseBrandDirectory(directory.html, unresolvedBrands, directoryUrl);
-    const unresolvedAfterStatic = unresolvedBrands.filter((brand) => !discovered.some((source) => normalizeBrandKey(source.brand) === normalizeBrandKey(brand)));
-    if (unresolvedAfterStatic.length) {
-        directory = await fetchPage(directoryUrl, true);
-        discovered = parseBrandDirectory(directory.html, unresolvedBrands, directoryUrl);
-    }
-    sources = [...sources, ...discovered];
-    const missing = unresolvedBrands.filter((brand) => !discovered.some((source) => normalizeBrandKey(source.brand) === normalizeBrandKey(brand)));
-    if (missing.length) log.warning('Some requested brands were not found in eBay All Brands', { missing });
-}
+let sources: BrandSource[] = [
+    ...input.startUrls.map((brandUrl) => ({ brand: brandNameFromUrl(brandUrl), brand_url: brandUrl })),
+    ...input.brands.map((brand) => ({ brand, brand_url: brandSourceUrl(brand) })),
+];
 sources = [...new Map(sources.map((source) => [source.brand_url, source])).values()];
 log.info('Resolved eBay brand sources', { requestedBrands: input.brands.length, directUrls: input.startUrls.length, resolvedSources: sources.length });
 
@@ -137,12 +122,19 @@ const discoveryDebug: Array<Record<string, unknown>> = [];
 const perBrandItems = await mapConcurrent(sources, input.maxConcurrency, async (source) => {
     try {
         const europeUrl = findEuropeFilterUrl('', source.brand_url) as string;
-        let filteredPage = await fetchPage(europeUrl, false);
-        let items = parseBrandItems(filteredPage.html, europeUrl, source.brand, input.maxListingsPerBrand);
+        let filteredPage;
+        let items = [] as ReturnType<typeof parseBrandItems>;
+        try {
+            filteredPage = await fetchPage(europeUrl, false);
+            items = parseBrandItems(filteredPage.html, europeUrl, source.brand, input.maxListingsPerBrand);
+        } catch (error) {
+            log.debug('Static brand discovery failed; retrying with rendering', { brand: source.brand, error: String(error) });
+        }
         if (!items.length) {
             filteredPage = await fetchPage(europeUrl, true);
             items = parseBrandItems(filteredPage.html, europeUrl, source.brand, input.maxListingsPerBrand);
         }
+        if (!filteredPage) throw new Error('Brand discovery returned no page');
         discoveryDebug.push({ brand: source.brand, brand_url: source.brand_url, europe_filter_url: europeUrl, item_count: items.length, page: inspectUnlockedPage(filteredPage.html, filteredPage) });
         log.info('Collected Europe-filtered brand items', { brand: source.brand, itemCount: items.length, requestAttempts: brightDataUsage.request_attempts });
         return items;
