@@ -27,7 +27,10 @@ export function normalizeInput(raw: ActorInput | null | undefined): Input {
         const url = new URL(value);
         if (url.protocol !== 'https:' || !/(^|\.)ebay\.[a-z.]+$/i.test(url.hostname) || !/\/b\//.test(url.pathname)) throw new Error('startUrls must contain public eBay brand page URLs');
     }
-    const requestedCountries = list(data.sellerCountries, ['EU'], 'sellerCountries').map((value) => value.toUpperCase());
+    const requestedCountries = list(data.sellerCountries, ['GB'], 'sellerCountries').map((value) => {
+        const countryCode = value.toUpperCase();
+        return countryCode === 'UK' ? 'GB' : countryCode;
+    });
     if (requestedCountries.some((value) => value !== 'EU' && !/^[A-Z]{2}$/.test(value))) throw new Error('sellerCountries must contain ISO alpha-2 codes or EU');
     const sellerCountries = [...new Set(requestedCountries.flatMap((value) => value === 'EU' ? EU_COUNTRIES : value))];
     const dedupeMode = (data.dedupeMode ?? 'new_and_updated') as DedupeMode;

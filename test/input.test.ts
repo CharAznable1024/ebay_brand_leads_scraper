@@ -21,5 +21,9 @@ describe('input', () => {
         const input = normalizeInput({});
         expect(input.brands).toEqual(DEFAULT_BRANDS);
         expect(input.startUrls).toEqual([]);
+        expect(input.sellerCountries).toEqual(['GB']);
+    });
+    it('accepts UK as an alias for GB', () => {
+        expect(normalizeInput({ sellerCountries: ['UK'] }).sellerCountries).toEqual(['GB']);
     });
 });

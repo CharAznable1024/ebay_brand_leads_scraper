@@ -4,6 +4,8 @@ This Actor starts from eBay's public [All Brands](https://www.ebay.com/n/all-bra
 
 `brands` and `startUrls` are optional. When both are empty, the Actor automatically uses a balanced default portfolio (`Gucci`, `CHANEL`, `Nike`, and `Apple`) so a caller can request seller leads with only `maxSellers` and qualification filters.
 
+When `sellerCountries` is omitted, the Actor defaults to United Kingdom sellers (`GB`). `UK` is accepted as an input alias and normalized to `GB`; explicit country filters continue to override the default.
+
 The current eBay Europe filter URL is `LH_PrefLoc=5&mag=1` (for example `https://www.ebay.com/b/Gucci/bn_21826083?LH_PrefLoc=5&mag=1`). The item-location filter narrows product evidence; seller country is still verified independently from About.
 
 The output is one seller lead per public eBay username. `brands` means brands evidenced by sampled product URLs; it does not claim official authorization. `matched_listing_count` is the number of sampled Europe-filtered listings tied to the seller. Seller country is verified separately from the public seller About page before output.
@@ -41,7 +43,7 @@ For API calls, `startUrls` uses Apify request objects:
       "url": "https://www.ebay.com/b/Gucci/bn_21826083?LH_PrefLoc=5&mag=1"
     }
   ],
-  "sellerCountries": ["EU"],
+  "sellerCountries": ["GB"],
   "maxSellers": 1,
   "dedupeMode": "all"
 }

@@ -3,7 +3,7 @@
   "shardId": "shd_default_portfolio_01",
   "brands": [],
   "startUrls": [],
-  "sellerCountries": ["EU"],
+  "sellerCountries": ["GB"],
   "maxListingsPerBrand": 30,
   "maxItemDetails": 80,
   "maxSellerProfiles": 40,
