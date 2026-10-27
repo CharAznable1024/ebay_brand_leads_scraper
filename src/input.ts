@@ -1,6 +1,7 @@
 import type { ActorInput, DedupeMode, Input } from './types.js';
 
 const EU_COUNTRIES = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'];
+export const DEFAULT_BRANDS = ['Gucci', 'CHANEL', 'Nike', 'Apple'];
 const list = (value: unknown, fallback: string[], field: string): string[] => {
     const raw = value === undefined ? fallback : value;
     if (!Array.isArray(raw)) throw new Error(`${field} must be an array`);
@@ -31,10 +32,12 @@ export function normalizeInput(raw: ActorInput | null | undefined): Input {
     const sellerCountries = [...new Set(requestedCountries.flatMap((value) => value === 'EU' ? EU_COUNTRIES : value))];
     const dedupeMode = (data.dedupeMode ?? 'new_and_updated') as DedupeMode;
     if (!['all', 'new_only', 'new_and_updated'].includes(dedupeMode)) throw new Error('Invalid dedupeMode');
+    const requestedBrands = list(data.brands, [], 'brands');
+    const brands = requestedBrands.length || startUrls.length ? requestedBrands : [...DEFAULT_BRANDS];
     return {
         campaignId: optionalIdentifier(data.campaignId, 'campaignId'),
         shardId: optionalIdentifier(data.shardId, 'shardId'),
-        brands: list(data.brands, [], 'brands'), startUrls, sellerCountries,
+        brands, startUrls, sellerCountries,
         maxListingsPerBrand: integer(data.maxListingsPerBrand, 30, 1, 200, 'maxListingsPerBrand'),
         maxItemDetails: integer(data.maxItemDetails, 80, 1, 500, 'maxItemDetails'),
         maxSellerProfiles: integer(data.maxSellerProfiles, 40, 1, 200, 'maxSellerProfiles'),

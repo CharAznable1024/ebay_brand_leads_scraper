@@ -71,8 +71,6 @@ const datasetId = process.env.APIFY_DEFAULT_DATASET_ID?.trim() || process.env.AC
 const apiKey = process.env.BRIGHT_DATA_API_KEY?.trim();
 const zone = process.env.BRIGHT_DATA_ZONE?.trim() || 'ebay_live_unlocker';
 if (!apiKey) throw new Error('BRIGHT_DATA_API_KEY is required because eBay brand, item, and profile pages block data-center browsers.');
-if (!input.brands.length && !input.startUrls.length) throw new Error('Provide at least one brand name or public eBay brand page URL.');
-
 const brightDataUsage = createWebUnlockerUsage();
 const runWebUnlockerRequest = createSerialGate(3_000);
 const fetchPage = (url: string, render = false, timeoutSecs = input.navigationTimeoutSecs) => runWebUnlockerRequest(() => fetchWithWebUnlocker(url, {

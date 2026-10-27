@@ -1,12 +1,8 @@
 {
   "campaignId": "cmp_example",
-  "shardId": "shd_gucci_01",
-  "brands": ["Gucci"],
-  "startUrls": [
-    {
-      "url": "https://www.ebay.com/b/Gucci/bn_21826083?LH_PrefLoc=5&mag=1"
-    }
-  ],
+  "shardId": "shd_default_portfolio_01",
+  "brands": [],
+  "startUrls": [],
   "sellerCountries": ["EU"],
   "maxListingsPerBrand": 30,
   "maxItemDetails": 80,

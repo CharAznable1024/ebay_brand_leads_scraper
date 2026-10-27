@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeInput } from '../src/input.js';
+import { DEFAULT_BRANDS, normalizeInput } from '../src/input.js';
 
 describe('input', () => {
     it('expands EU countries and accepts eBay brand URLs', () => {
@@ -16,5 +16,10 @@ describe('input', () => {
     it('validates Aime identifiers', () => {
         expect(normalizeInput({ brands: ['Gucci'] }).campaignId).toBeNull();
         expect(() => normalizeInput({ brands: ['Gucci'], campaignId: 'bad id' })).toThrow(/campaignId/);
+    });
+    it('uses a balanced default brand portfolio when no discovery source is supplied', () => {
+        const input = normalizeInput({});
+        expect(input.brands).toEqual(DEFAULT_BRANDS);
+        expect(input.startUrls).toEqual([]);
     });
 });
